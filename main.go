@@ -92,6 +92,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 }
 
 func verifyToken(ctx context.Context, token string, audiences []string, allowed []string) (bool, error) {
+	token = strings.TrimPrefix(token, "Bearer ")
 	tr := authv1.TokenReview{
 		Spec: authv1.TokenReviewSpec{
 			Token:     token,
