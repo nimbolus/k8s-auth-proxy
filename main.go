@@ -22,7 +22,12 @@ func main() {
 	listenAddr := flag.String("listen", ":8080", "Address to listen on")
 	k8sApiUrl := flag.String("master", "", "Kubernetes API URL")
 	k8sKubeconfig := flag.String("kubeconfig", "", "Kubeconfig file")
+	debug := flag.Bool("debug", false, "Enable debug logging")
 	flag.Parse()
+
+	if *debug {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
 
 	config, err := clientcmd.BuildConfigFromFlags(*k8sApiUrl, *k8sKubeconfig)
 	if err != nil {
@@ -46,6 +51,7 @@ func main() {
 func handleAuth(w http.ResponseWriter, r *http.Request) {
 	token := r.Header.Get("Authorization")
 	if len(token) == 0 {
+		logrus.Debug("Authorization header not supplied")
 		http.Error(w, "Authorization header not supplied", http.StatusUnauthorized)
 
 		return
@@ -53,6 +59,7 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 
 	audiencesRaw := r.URL.Query().Get("audience")
 	if len(audiencesRaw) == 0 {
+		logrus.Debug("audience query parameter not supplied")
 		http.Error(w, "audience query parameter not supplied", http.StatusBadRequest)
 
 		return
@@ -67,11 +74,13 @@ func handleAuth(w http.ResponseWriter, r *http.Request) {
 
 	authenticated, err := verifyToken(ctx, token, audiences, allowed)
 	if err != nil {
+		logrus.Errorf("error verifying token: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return
 	}
 	if !authenticated {
+		logrus.Debug("Invalid token")
 		http.Error(w, "Invalid token", http.StatusForbidden)
 
 		return
